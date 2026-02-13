@@ -30,10 +30,6 @@ body{
   margin-bottom:15px;
 }
 
-.category h3{
-  margin:5px 0;
-}
-
 .blockButton{
   display:block;
   width:100%;
@@ -50,7 +46,8 @@ body{
   margin-bottom:8px;
   border-left:6px solid black;
 }
-input, button{
+
+input, select, button{
   width:100%;
   margin-bottom:6px;
   padding:6px;
@@ -70,6 +67,7 @@ input, button{
 
 <h2>Neuer Block</h2>
 <input id="blockText" placeholder="Text vom Block">
+<select id="categorySelect"></select>
 <button onclick="addBlock()">Block hinzufügen</button>
 
 <hr>
@@ -91,18 +89,32 @@ function save(){
   localStorage.setItem("cats", JSON.stringify(categories));
 }
 
-function renderCategories(){
-  const container = document.getElementById("categories");
-  container.innerHTML = "";
+function updateCategorySelect(){
+  const select=document.getElementById("categorySelect");
+  select.innerHTML="";
 
-  categories.forEach((cat, index)=>{
-    const div = document.createElement("div");
+  categories.forEach((cat,index)=>{
+    const option=document.createElement("option");
+    option.value=index;
+    option.textContent=cat.name;
+    select.appendChild(option);
+  });
+}
+
+function renderCategories(){
+  const container=document.getElementById("categories");
+  container.innerHTML="";
+
+  categories.forEach((cat,index)=>{
+    const div=document.createElement("div");
     div.className="category";
 
-    div.innerHTML = "<h3>"+cat.name+"</h3>";
+    const title=document.createElement("h3");
+    title.textContent=cat.name;
+    div.appendChild(title);
 
     cat.blocks.forEach(block=>{
-      const btn = document.createElement("button");
+      const btn=document.createElement("button");
       btn.className="blockButton";
       btn.style.background=cat.color;
       btn.innerText=block;
@@ -116,6 +128,8 @@ function renderCategories(){
 
     container.appendChild(div);
   });
+
+  updateCategorySelect();
 }
 
 function addCategory(){
@@ -136,10 +150,11 @@ function addCategory(){
 
 function addBlock(){
   const text=document.getElementById("blockText").value;
+  const index=document.getElementById("categorySelect").value;
 
-  if(!text || categories.length===0) return;
+  if(!text || index===null) return;
 
-  categories[categories.length-1].blocks.push(text);
+  categories[index].blocks.push(text);
 
   save();
   renderCategories();
