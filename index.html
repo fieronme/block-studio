@@ -2,75 +2,49 @@
 <html>
 <head>
 <meta charset="utf-8">
-<title>Blockly Custom Studio</title>
+<title>Blockly User Save FIXED</title>
 
 <script src="https://unpkg.com/blockly/blockly.min.js"></script>
 <script src="https://unpkg.com/blockly/blocks.min.js"></script>
-<script src="https://unpkg.com/blockly/javascript.min.js"></script>
 
 <style>
-body {
-  margin:0;
-  display:flex;
-  height:100vh;
-  font-family:Arial;
-}
+body { margin:0; display:flex; height:100vh; font-family:Arial; }
+#left { width:280px; padding:10px; background:#222; color:white; }
+#blocklyDiv { flex:1; height:100%; }
 
-#leftPanel {
-  width:300px;
-  background:#1e1e1e;
-  color:white;
-  padding:15px;
-}
-
-#blocklyDiv {
-  flex:1;
-  height:100%;
-}
-
-input, button {
+input,button {
   width:100%;
   margin-bottom:8px;
   padding:6px;
-  border:none;
-  border-radius:6px;
-}
-
-button {
-  background:#4CAF50;
-  color:white;
-  cursor:pointer;
 }
 </style>
 </head>
-
 <body>
 
-<div id="leftPanel">
-
-<h3>Kategorie erstellen</h3>
-<input id="catName" placeholder="Kategorie Name">
-<input id="catColor" placeholder="Farbe 0-360">
-<button onclick="addCategory()">Hinzufügen</button>
+<div id="left">
+<h3>User Login</h3>
+<input id="username" placeholder="Name eingeben">
+<button onclick="login()">Login</button>
 
 <hr>
 
-<h3>Block erstellen</h3>
+<h3>Kategorie</h3>
+<input id="catName" placeholder="Kategorie Name">
+<button onclick="addCategory()">Add</button>
+
+<hr>
+
+<h3>Block</h3>
 <input id="blockType" placeholder="Block ID">
 <input id="blockText" placeholder="Text z.B. sage %1">
-<button onclick="addBlock()">Block hinzufügen</button>
+<button onclick="addBlock()">Add Block</button>
 
 <hr>
-
-<button onclick="clearSave()">Alles zurücksetzen</button>
-
+<button onclick="resetAll()">Reset Alles</button>
 </div>
 
 <div id="blocklyDiv"></div>
 
-<xml id="toolbox" style="display:none"></xml>
-
 <script src="app.js"></script>
-
 </body>
 </html>
