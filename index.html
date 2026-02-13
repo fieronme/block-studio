@@ -1,247 +1,48 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="UTF-8">
-<title>Block Studio ULTRA FIXED</title>
+  <meta charset="utf-8">
+  <title>Blockly Test</title>
 
-<!-- Blockly Core -->
-<script src="https://unpkg.com/blockly/blockly.min.js"></script>
-<!-- WICHTIG: Standard Blöcke -->
-<script src="https://unpkg.com/blockly/blocks.min.js"></script>
-<!-- JavaScript Generator -->
-<script src="https://unpkg.com/blockly/javascript.min.js"></script>
+  <!-- Blockly Core -->
+  <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+  <!-- Standard Blöcke -->
+  <script src="https://unpkg.com/blockly/blocks.min.js"></script>
+  <!-- JS Generator -->
+  <script src="https://unpkg.com/blockly/javascript.min.js"></script>
 
-<style>
-body {
-  margin:0;
-  display:flex;
-  height:100vh;
-  font-family:Arial;
-  background:#121212;
-  color:white;
-}
-
-#leftPanel {
-  width:340px;
-  padding:15px;
-  overflow:auto;
-  background:#1e1e1e;
-}
-
-#blocklyDiv {
-  flex:1;
-  height:100%;
-}
-
-input, button {
-  width:100%;
-  margin-bottom:8px;
-  padding:6px;
-  border-radius:6px;
-  border:none;
-}
-
-button {
-  cursor:pointer;
-  background:#4CAF50;
-  color:white;
-}
-button:hover { background:#45a049; }
-</style>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+    #blocklyDiv {
+      height: 100%;
+      width: 100%;
+    }
+  </style>
 </head>
-
 <body>
-
-<div id="leftPanel">
-
-<h2>👤 Benutzer</h2>
-<input id="username" placeholder="Benutzername">
-<button onclick="login()">Login / Erstellen</button>
-
-<hr>
-
-<h2>📂 Kategorie</h2>
-<input id="catName" placeholder="Kategorie Name">
-<input id="catColor" placeholder="Farbe 0-360">
-<button onclick="addCategory()">Kategorie hinzufügen</button>
-
-<input id="subCatName" placeholder="Unterkategorie Name">
-<button onclick="addSubCategory()">Unterkategorie hinzufügen</button>
-
-<hr>
-
-<h2>🧱 Block</h2>
-<input id="blockType" placeholder="Block ID">
-<input id="blockText" placeholder="Text z.B. sage %1">
-<button onclick="addBlock()">Block hinzufügen</button>
-
-<hr>
-
-<button onclick="exportWorkspace()">📦 Export XML</button>
-
-</div>
 
 <div id="blocklyDiv"></div>
 
-<script>
+<xml id="toolbox" style="display:none">
+  <category name="Logic" colour="210">
+    <block type="controls_if"></block>
+    <block type="logic_compare"></block>
+  </category>
 
-let currentUser = null;
-let categories = [];
-let workspace;
+  <category name="Loops" colour="120">
+    <block type="controls_repeat_ext"></block>
+  </category>
 
-function login(){
-  const name = username.value;
-  if(!name) return;
-  currentUser = name;
+  <category name="Math" colour="230">
+    <block type="math_number"></block>
+    <block type="math_arithmetic"></block>
+  </category>
+</xml>
 
-  categories = JSON.parse(localStorage.getItem("cats_"+name)) || [
-
-    // Standard Kategorien mit echten Blöcken
-    {
-      name:"Logic",
-      colour:210,
-      blocks:["controls_if","logic_compare"],
-      subcategories:[]
-    },
-    {
-      name:"Math",
-      colour:230,
-      blocks:["math_number","math_arithmetic"],
-      subcategories:[]
-    }
-  ];
-
-  initBlockly();
-}
-
-function saveAll(){
-  if(!currentUser) return;
-
-  localStorage.setItem("cats_"+currentUser, JSON.stringify(categories));
-
-  const xml = Blockly.Xml.workspaceToDom(workspace);
-  localStorage.setItem("ws_"+currentUser,
-    Blockly.Xml.domToText(xml));
-}
-
-function buildToolbox(){
-  let xml = '<xml>';
-
-  categories.forEach(cat=>{
-    xml += `<category name="${cat.name}" colour="${cat.colour}">`;
-
-    if(cat.subcategories){
-      cat.subcategories.forEach(sub=>{
-        xml += `<category name="${sub.name}" colour="${sub.colour}">`;
-        sub.blocks.forEach(b=>{
-          xml += `<block type="${b}"></block>`;
-        });
-        xml += `</category>`;
-      });
-    }
-
-    cat.blocks.forEach(b=>{
-      xml += `<block type="${b}"></block>`;
-    });
-
-    xml += `</category>`;
-  });
-
-  xml += '</xml>';
-  return xml;
-}
-
-function initBlockly(){
-  if(workspace) workspace.dispose();
-
-  workspace = Blockly.inject('blocklyDiv',{
-    toolbox: buildToolbox(),
-    trashcan:true,
-    scrollbars:true
-  });
-
-  const saved = localStorage.getItem("ws_"+currentUser);
-  if(saved){
-    Blockly.Xml.domToWorkspace(
-      Blockly.Xml.textToDom(saved),
-      workspace
-    );
-  }
-
-  workspace.addChangeListener(saveAll);
-}
-
-function addCategory(){
-  if(!catName.value) return;
-
-  categories.push({
-    name:catName.value,
-    colour:catColor.value || 180,
-    blocks:[],
-    subcategories:[]
-  });
-
-  refresh();
-}
-
-function addSubCategory(){
-  if(!subCatName.value) return;
-
-  const last = categories[categories.length-1];
-
-  last.subcategories.push({
-    name:subCatName.value,
-    colour:last.colour - 20,
-    blocks:[]
-  });
-
-  refresh();
-}
-
-function addBlock(){
-  if(!blockType.value || !blockText.value) return;
-
-  Blockly.defineBlocksWithJsonArray([{
-    type:blockType.value,
-    message0:blockText.value,
-    args0:[{
-      type:"field_input",
-      name:"TEXT",
-      text:"Hallo"
-    }],
-    previousStatement:null,
-    nextStatement:null,
-    colour:160
-  }]);
-
-  const lastCat = categories[categories.length-1];
-
-  if(lastCat.subcategories.length>0){
-    lastCat.subcategories[lastCat.subcategories.length-1]
-      .blocks.push(blockType.value);
-  } else {
-    lastCat.blocks.push(blockType.value);
-  }
-
-  refresh();
-}
-
-function refresh(){
-  workspace.updateToolbox(buildToolbox());
-  saveAll();
-}
-
-function exportWorkspace(){
-  const xml = Blockly.Xml.workspaceToDom(workspace);
-  const data = Blockly.Xml.domToText(xml);
-  const blob = new Blob([data],{type:"text/xml"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "workspace.xml";
-  a.click();
-}
-
-</script>
+<script src="app.js"></script>
 
 </body>
 </html>
