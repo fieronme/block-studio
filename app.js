@@ -1,17 +1,43 @@
-let categories = JSON.parse(localStorage.getItem("categories")) || [
-  {
-    name:"Logic",
-    colour:210,
-    blocks:["controls_if","logic_compare"]
-  },
-  {
-    name:"Math",
-    colour:230,
-    blocks:["math_number","math_arithmetic"]
-  }
-];
-
 let workspace;
+let currentUser = null;
+let categories = [];
+
+function login(){
+  const name = document.getElementById("username").value;
+  if(!name) return;
+
+  currentUser = name;
+
+  categories = JSON.parse(localStorage.getItem("cats_"+name)) || [
+    {
+      name:"Logic",
+      colour:210,
+      blocks:["controls_if","logic_compare"]
+    }
+  ];
+
+  initWorkspace();
+}
+
+function initWorkspace(){
+
+  if(workspace) workspace.dispose();
+
+  workspace = Blockly.inject('blocklyDiv',{
+    toolbox: buildToolbox(),
+    trashcan:true
+  });
+
+  const saved = localStorage.getItem("ws_"+currentUser);
+  if(saved){
+    Blockly.Xml.domToWorkspace(
+      Blockly.Xml.textToDom(saved),
+      workspace
+    );
+  }
+
+  workspace.addChangeListener(saveAll);
+}
 
 function buildToolbox(){
   let xml = "<xml>";
@@ -30,49 +56,30 @@ function buildToolbox(){
   return xml;
 }
 
-function init(){
-  workspace = Blockly.inject('blocklyDiv',{
-    toolbox: buildToolbox(),
-    trashcan:true,
-    scrollbars:true
-  });
+function saveAll(){
+  if(!currentUser) return;
 
-  const saved = localStorage.getItem("workspace");
-  if(saved){
-    Blockly.Xml.domToWorkspace(
-      Blockly.Xml.textToDom(saved),
-      workspace
-    );
-  }
-
-  workspace.addChangeListener(saveWorkspace);
-}
-
-function saveWorkspace(){
-  const xml = Blockly.Xml.workspaceToDom(workspace);
   localStorage.setItem(
-    "workspace",
-    Blockly.Xml.domToText(xml)
-  );
-  localStorage.setItem(
-    "categories",
+    "cats_"+currentUser,
     JSON.stringify(categories)
   );
-}
 
-function refresh(){
-  workspace.updateToolbox(buildToolbox());
-  saveWorkspace();
+  const xml = Blockly.Xml.workspaceToDom(workspace);
+  localStorage.setItem(
+    "ws_"+currentUser,
+    Blockly.Xml.domToText(xml)
+  );
 }
 
 function addCategory(){
+  if(!currentUser) return alert("Erst Login!");
+
   const name = document.getElementById("catName").value;
-  const colour = document.getElementById("catColor").value || 180;
   if(!name) return;
 
   categories.push({
     name:name,
-    colour:colour,
+    colour:180,
     blocks:[]
   });
 
@@ -80,6 +87,8 @@ function addCategory(){
 }
 
 function addBlock(){
+  if(!currentUser) return alert("Erst Login!");
+
   const type = document.getElementById("blockType").value;
   const text = document.getElementById("blockText").value;
   if(!type || !text) return;
@@ -98,12 +107,16 @@ function addBlock(){
   }]);
 
   categories[categories.length-1].blocks.push(type);
+
   refresh();
 }
 
-function clearSave(){
+function refresh(){
+  workspace.updateToolbox(buildToolbox());
+  saveAll();
+}
+
+function resetAll(){
   localStorage.clear();
   location.reload();
 }
-
-window.addEventListener("load", init);
