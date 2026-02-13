@@ -1,52 +1,21 @@
-let workspace;
-let currentUser = null;
-let categories = [];
-
-function login(){
-  const name = document.getElementById("username").value;
-  if(!name) return;
-
-  currentUser = name;
-
-  categories = JSON.parse(localStorage.getItem("cats_"+name)) || [
-    {
-      name:"Logic",
-      colour:210,
-      blocks:["controls_if","logic_compare"]
-    }
-  ];
-
-  initWorkspace();
-}
-
-function initWorkspace(){
-
-  if(workspace) workspace.dispose();
-
-  workspace = Blockly.inject('blocklyDiv',{
-    toolbox: buildToolbox(),
-    trashcan:true
-  });
-
-  const saved = localStorage.getItem("ws_"+currentUser);
-  if(saved){
-    Blockly.Xml.domToWorkspace(
-      Blockly.Xml.textToDom(saved),
-      workspace
-    );
+let categories = [
+  {
+    name: "Start",
+    colour: 210,
+    blocks: ["controls_if", "logic_compare"]
   }
+];
 
-  workspace.addChangeListener(saveAll);
-}
+let workspace;
 
-function buildToolbox(){
+function buildToolbox() {
   let xml = "<xml>";
 
-  categories.forEach(cat=>{
+  categories.forEach(cat => {
     xml += `<category name="${cat.name}" colour="${cat.colour}">`;
 
-    cat.blocks.forEach(b=>{
-      xml += `<block type="${b}"></block>`;
+    cat.blocks.forEach(block => {
+      xml += `<block type="${block}"></block>`;
     });
 
     xml += "</category>";
@@ -56,67 +25,86 @@ function buildToolbox(){
   return xml;
 }
 
-function saveAll(){
-  if(!currentUser) return;
-
-  localStorage.setItem(
-    "cats_"+currentUser,
-    JSON.stringify(categories)
-  );
-
-  const xml = Blockly.Xml.workspaceToDom(workspace);
-  localStorage.setItem(
-    "ws_"+currentUser,
-    Blockly.Xml.domToText(xml)
-  );
-}
-
-function addCategory(){
-  if(!currentUser) return alert("Erst Login!");
-
-  const name = document.getElementById("catName").value;
-  if(!name) return;
-
-  categories.push({
-    name:name,
-    colour:180,
-    blocks:[]
+function init() {
+  workspace = Blockly.inject("blocklyDiv", {
+    toolbox: buildToolbox(),
+    trashcan: true
   });
 
-  refresh();
+  workspace.addChangeListener(saveWorkspace);
+
+  loadWorkspace();
 }
 
-function addBlock(){
-  if(!currentUser) return alert("Erst Login!");
+function refreshToolbox() {
+  workspace.updateToolbox(buildToolbox());
+  saveWorkspace();
+}
 
+function addCategory() {
+  const name = document.getElementById("catName").value;
+  const colour = document.getElementById("catColor").value || 180;
+
+  if (!name) return;
+
+  categories.push({
+    name: name,
+    colour: colour,
+    blocks: []
+  });
+
+  refreshToolbox();
+}
+
+function addBlock() {
   const type = document.getElementById("blockType").value;
   const text = document.getElementById("blockText").value;
-  if(!type || !text) return;
 
-  Blockly.defineBlocksWithJsonArray([{
-    type:type,
-    message0:text,
-    args0:[{
-      type:"field_input",
-      name:"TEXT",
-      text:"Hallo"
-    }],
-    previousStatement:null,
-    nextStatement:null,
-    colour:160
-  }]);
+  if (!type || !text) return;
 
-  categories[categories.length-1].blocks.push(type);
+  Blockly.defineBlocksWithJsonArray([
+    {
+      type: type,
+      message0: text,
+      args0: [
+        {
+          type: "field_input",
+          name: "TEXT",
+          text: "Hallo"
+        }
+      ],
+      previousStatement: null,
+      nextStatement: null,
+      colour: 160
+    }
+  ]);
 
-  refresh();
+  categories[categories.length - 1].blocks.push(type);
+
+  refreshToolbox();
 }
 
-function refresh(){
-  workspace.updateToolbox(buildToolbox());
-  saveAll();
+function saveWorkspace() {
+  const xml = Blockly.Xml.workspaceToDom(workspace);
+  const text = Blockly.Xml.domToText(xml);
+  localStorage.setItem("workspace", text);
+  localStorage.setItem("categories", JSON.stringify(categories));
 }
 
-function resetAll(){
-  localStorage.clear();
-  location.reload();
+function loadWorkspace() {
+  const savedWs = localStorage.getItem("workspace");
+  const savedCats = localStorage.getItem("categories");
+
+  if (savedCats) {
+    categories = JSON.parse(savedCats);
+  }
+
+  if (savedWs) {
+    const xml = Blockly.Xml.textToDom(savedWs);
+    Blockly.Xml.domToWorkspace(xml, workspace);
+  }
+
+  refreshToolbox();
 }
+
+window.addEventListener("load", init);
