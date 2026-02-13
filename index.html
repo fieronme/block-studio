@@ -1,33 +1,56 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="utf-8">
-<title>Blockly Custom Studio</title>
-
-<script src="https://unpkg.com/blockly/blockly.min.js"></script>
-<script src="https://unpkg.com/blockly/blocks.min.js"></script>
+<meta charset="UTF-8">
+<title>Button Block Studio</title>
 
 <style>
-body {
+body{
   margin:0;
   display:flex;
   height:100vh;
   font-family:Arial;
 }
 
-#leftPanel {
-  width:280px;
+#sidebar{
+  width:260px;
   background:#222;
   color:white;
   padding:10px;
+  overflow-y:auto;
 }
 
-#blocklyDiv {
+#workspace{
   flex:1;
-  height:100%;
+  padding:20px;
+  background:#f4f4f4;
 }
 
-input, button {
+.category{
+  margin-bottom:15px;
+}
+
+.category h3{
+  margin:5px 0;
+}
+
+.blockButton{
+  display:block;
+  width:100%;
+  margin-bottom:5px;
+  padding:6px;
+  border:none;
+  cursor:pointer;
+  color:white;
+}
+
+.outputBlock{
+  background:white;
+  padding:10px;
+  margin-bottom:8px;
+  border-left:6px solid black;
+}
+input, button{
   width:100%;
   margin-bottom:6px;
   padding:6px;
@@ -36,25 +59,107 @@ input, button {
 </head>
 <body>
 
-<div id="leftPanel">
+<div id="sidebar">
 
-<h3>Neue Kategorie</h3>
+<h2>Neue Kategorie</h2>
 <input id="catName" placeholder="Name">
-<input id="catColor" placeholder="Farbe 0-360">
+<input id="catColor" placeholder="Farbe (z.B. red oder #ff0000)">
 <button onclick="addCategory()">Kategorie hinzufügen</button>
 
 <hr>
 
-<h3>Neuer Block</h3>
-<input id="blockType" placeholder="Block ID">
-<input id="blockText" placeholder="Text z.B. sage %1">
+<h2>Neuer Block</h2>
+<input id="blockText" placeholder="Text vom Block">
 <button onclick="addBlock()">Block hinzufügen</button>
+
+<hr>
+
+<div id="categories"></div>
 
 </div>
 
-<div id="blocklyDiv"></div>
+<div id="workspace">
+<h2>Arbeitsbereich</h2>
+<div id="output"></div>
+<button onclick="clearWorkspace()">Alles löschen</button>
+</div>
 
-<script src="app.js"></script>
+<script>
+let categories = JSON.parse(localStorage.getItem("cats")) || [];
+
+function save(){
+  localStorage.setItem("cats", JSON.stringify(categories));
+}
+
+function renderCategories(){
+  const container = document.getElementById("categories");
+  container.innerHTML = "";
+
+  categories.forEach((cat, index)=>{
+    const div = document.createElement("div");
+    div.className="category";
+
+    div.innerHTML = "<h3>"+cat.name+"</h3>";
+
+    cat.blocks.forEach(block=>{
+      const btn = document.createElement("button");
+      btn.className="blockButton";
+      btn.style.background=cat.color;
+      btn.innerText=block;
+
+      btn.onclick=()=>{
+        addToWorkspace(block,cat.color);
+      }
+
+      div.appendChild(btn);
+    });
+
+    container.appendChild(div);
+  });
+}
+
+function addCategory(){
+  const name=document.getElementById("catName").value;
+  const color=document.getElementById("catColor").value || "blue";
+
+  if(!name) return;
+
+  categories.push({
+    name:name,
+    color:color,
+    blocks:[]
+  });
+
+  save();
+  renderCategories();
+}
+
+function addBlock(){
+  const text=document.getElementById("blockText").value;
+
+  if(!text || categories.length===0) return;
+
+  categories[categories.length-1].blocks.push(text);
+
+  save();
+  renderCategories();
+}
+
+function addToWorkspace(text,color){
+  const div=document.createElement("div");
+  div.className="outputBlock";
+  div.style.borderColor=color;
+  div.innerText=text;
+
+  document.getElementById("output").appendChild(div);
+}
+
+function clearWorkspace(){
+  document.getElementById("output").innerHTML="";
+}
+
+renderCategories();
+</script>
 
 </body>
 </html>
