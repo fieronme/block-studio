@@ -2,53 +2,23 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Block Studio ULTRA</title>
+<title>Block Studio ULTRA+</title>
 <script src="https://unpkg.com/blockly/blockly.min.js"></script>
 
 <style>
-body {
-  margin:0;
-  display:flex;
-  height:100vh;
-  font-family:Arial;
-  background:#121212;
-  color:white;
-}
-
-#leftPanel {
-  width:320px;
-  padding:15px;
-  overflow:auto;
-  background:#1e1e1e;
-}
-
-#blocklyDiv {
-  flex:1;
-  height:100%;
-}
-
+body { margin:0; display:flex; height:100vh; font-family:Arial; background:#121212; color:white; }
+#leftPanel { width:340px; padding:15px; overflow:auto; background:#1e1e1e; }
+#blocklyDiv { flex:1; height:100%; }
 input, select, button {
-  width:100%;
-  margin-bottom:10px;
-  padding:6px;
-  border-radius:6px;
-  border:none;
+  width:100%; margin-bottom:8px; padding:6px;
+  border-radius:6px; border:none;
 }
-
-button { cursor:pointer; }
-
-.theme-dark { background:#121212; color:white; }
-.theme-neon { background:#000; color:#0ff; }
-.theme-scratch { background:#f7a400; color:black; }
-
-.categoryItem {
-  padding:5px;
-  margin:3px 0;
-  background:#333;
-  cursor:move;
-}
+button { cursor:pointer; background:#4CAF50; color:white; }
+button:hover { background:#45a049; }
+.categoryItem { padding:5px; margin:3px 0; background:#333; }
 </style>
 </head>
+
 <body>
 
 <div id="leftPanel">
@@ -59,21 +29,13 @@ button { cursor:pointer; }
 
 <hr>
 
-<h2>🎨 Theme</h2>
-<select onchange="changeTheme(this.value)">
-<option value="dark">Dark</option>
-<option value="neon">Neon</option>
-<option value="scratch">Scratch Style</option>
-</select>
-
-<hr>
-
-<h2>📂 Kategorien</h2>
+<h2>📂 Kategorie</h2>
 <input id="catName" placeholder="Kategorie Name">
 <input id="catColor" placeholder="Farbe 0-360">
 <button onclick="addCategory()">Kategorie hinzufügen</button>
 
-<div id="categoryList"></div>
+<input id="subCatName" placeholder="Unterkategorie Name">
+<button onclick="addSubCategory()">Unterkategorie hinzufügen</button>
 
 <hr>
 
@@ -84,52 +46,72 @@ button { cursor:pointer; }
 
 <hr>
 
-<h2>📦 Export</h2>
-<button onclick="exportWorkspace()">Workspace exportieren</button>
+<button onclick="exportWorkspace()">📦 Export XML</button>
 
 </div>
 
 <div id="blocklyDiv"></div>
 
 <script>
+
 let currentUser = null;
 let categories = [];
+let workspace;
 
 function login(){
-  const name = document.getElementById("username").value;
+  const name = username.value;
   if(!name) return;
+
   currentUser = name;
 
   categories = JSON.parse(localStorage.getItem("cats_"+name)) || [
-    {name:"Start", colour:200, blocks:[]}
+    {
+      name:"Start",
+      colour:200,
+      blocks:[],
+      subcategories:[]
+    }
   ];
 
   initBlockly();
-  renderCategoryList();
 }
 
 function saveAll(){
   if(!currentUser) return;
+
   localStorage.setItem("cats_"+currentUser, JSON.stringify(categories));
+
   const xml = Blockly.Xml.workspaceToDom(workspace);
   localStorage.setItem("ws_"+currentUser,
     Blockly.Xml.domToText(xml));
 }
 
 function buildToolbox(){
-  let xml='<xml>';
+  let xml = '<xml>';
+
   categories.forEach(cat=>{
-    xml+=`<category name="${cat.name}" colour="${cat.colour}">`;
+    xml += `<category name="${cat.name}" colour="${cat.colour}">`;
+
+    if(cat.subcategories){
+      cat.subcategories.forEach(sub=>{
+        xml += `<category name="${sub.name}" colour="${sub.colour}">`;
+        sub.blocks.forEach(b=>{
+          xml += `<block type="${b}"></block>`;
+        });
+        xml += `</category>`;
+      });
+    }
+
     cat.blocks.forEach(b=>{
-      xml+=`<block type="${b}"></block>`;
+      xml += `<block type="${b}"></block>`;
     });
-    xml+='</category>';
+
+    xml += `</category>`;
   });
-  xml+='</xml>';
+
+  xml += '</xml>';
   return xml;
 }
-
-let workspace;
 
 function initBlockly(){
   if(workspace) workspace.dispose();
@@ -150,21 +132,38 @@ function initBlockly(){
 }
 
 function addCategory(){
-  const name = catName.value;
-  const colour = catColor.value || 180;
-  if(!name) return;
-  categories.push({name, colour, blocks:[]});
+  if(!catName.value) return;
+
+  categories.push({
+    name:catName.value,
+    colour:catColor.value || 180,
+    blocks:[],
+    subcategories:[]
+  });
+
+  refresh();
+}
+
+function addSubCategory(){
+  if(!subCatName.value) return;
+
+  const last = categories[categories.length-1];
+
+  last.subcategories.push({
+    name:subCatName.value,
+    colour:last.colour - 20,
+    blocks:[]
+  });
+
   refresh();
 }
 
 function addBlock(){
-  const type = blockType.value;
-  const text = blockText.value;
-  if(!type || !text) return;
+  if(!blockType.value || !blockText.value) return;
 
   Blockly.defineBlocksWithJsonArray([{
-    type:type,
-    message0:text,
+    type:blockType.value,
+    message0:blockText.value,
     args0:[{
       type:"field_input",
       name:"TEXT",
@@ -175,35 +174,20 @@ function addBlock(){
     colour:160
   }]);
 
-  categories[categories.length-1].blocks.push(type);
+  const lastCat = categories[categories.length-1];
+
+  if(lastCat.subcategories.length>0){
+    lastCat.subcategories[lastCat.subcategories.length-1].blocks.push(blockType.value);
+  } else {
+    lastCat.blocks.push(blockType.value);
+  }
+
   refresh();
 }
 
 function refresh(){
   workspace.updateToolbox(buildToolbox());
-  renderCategoryList();
   saveAll();
-}
-
-function renderCategoryList(){
-  const list = document.getElementById("categoryList");
-  list.innerHTML="";
-  categories.forEach((cat,i)=>{
-    const div=document.createElement("div");
-    div.className="categoryItem";
-    div.draggable=true;
-    div.innerText=cat.name;
-    div.ondragstart=e=>e.dataTransfer.setData("index",i);
-    div.ondragover=e=>e.preventDefault();
-    div.ondrop=e=>{
-      const from=e.dataTransfer.getData("index");
-      const temp=categories[from];
-      categories.splice(from,1);
-      categories.splice(i,0,temp);
-      refresh();
-    };
-    list.appendChild(div);
-  });
 }
 
 function exportWorkspace(){
@@ -216,10 +200,6 @@ function exportWorkspace(){
   a.click();
 }
 
-function changeTheme(t){
-  document.body.className="";
-  document.body.classList.add("theme-"+t);
-}
 </script>
 
 </body>
