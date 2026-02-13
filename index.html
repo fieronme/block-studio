@@ -2,27 +2,225 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>ULTRA Block Studio</title>
+<title>Block Studio ULTRA</title>
+<script src="https://unpkg.com/blockly/blockly.min.js"></script>
 
-<script src="blockly.min.js"></script>
-<link rel="stylesheet" href="style.css">
+<style>
+body {
+  margin:0;
+  display:flex;
+  height:100vh;
+  font-family:Arial;
+  background:#121212;
+  color:white;
+}
 
+#leftPanel {
+  width:320px;
+  padding:15px;
+  overflow:auto;
+  background:#1e1e1e;
+}
+
+#blocklyDiv {
+  flex:1;
+  height:100%;
+}
+
+input, select, button {
+  width:100%;
+  margin-bottom:10px;
+  padding:6px;
+  border-radius:6px;
+  border:none;
+}
+
+button { cursor:pointer; }
+
+.theme-dark { background:#121212; color:white; }
+.theme-neon { background:#000; color:#0ff; }
+.theme-scratch { background:#f7a400; color:black; }
+
+.categoryItem {
+  padding:5px;
+  margin:3px 0;
+  background:#333;
+  cursor:move;
+}
+</style>
 </head>
 <body>
 
-<h2>🧩 ULTRA Block Studio</h2>
+<div id="leftPanel">
 
-<select id="themeSelect">
-  <option value="dark">Dark</option>
-  <option value="light">Light</option>
-  <option value="neon">Neon</option>
+<h2>👤 Benutzer</h2>
+<input id="username" placeholder="Benutzername">
+<button onclick="login()">Login / Erstellen</button>
+
+<hr>
+
+<h2>🎨 Theme</h2>
+<select onchange="changeTheme(this.value)">
+<option value="dark">Dark</option>
+<option value="neon">Neon</option>
+<option value="scratch">Scratch Style</option>
 </select>
+
+<hr>
+
+<h2>📂 Kategorien</h2>
+<input id="catName" placeholder="Kategorie Name">
+<input id="catColor" placeholder="Farbe 0-360">
+<button onclick="addCategory()">Kategorie hinzufügen</button>
+
+<div id="categoryList"></div>
+
+<hr>
+
+<h2>🧱 Block</h2>
+<input id="blockType" placeholder="Block ID">
+<input id="blockText" placeholder="Text z.B. sage %1">
+<button onclick="addBlock()">Block hinzufügen</button>
+
+<hr>
+
+<h2>📦 Export</h2>
+<button onclick="exportWorkspace()">Workspace exportieren</button>
+
+</div>
 
 <div id="blocklyDiv"></div>
 
-<textarea id="preview" placeholder="Live Preview"></textarea>
+<script>
+let currentUser = null;
+let categories = [];
 
-<script src="app.js"></script>
+function login(){
+  const name = document.getElementById("username").value;
+  if(!name) return;
+  currentUser = name;
+
+  categories = JSON.parse(localStorage.getItem("cats_"+name)) || [
+    {name:"Start", colour:200, blocks:[]}
+  ];
+
+  initBlockly();
+  renderCategoryList();
+}
+
+function saveAll(){
+  if(!currentUser) return;
+  localStorage.setItem("cats_"+currentUser, JSON.stringify(categories));
+  const xml = Blockly.Xml.workspaceToDom(workspace);
+  localStorage.setItem("ws_"+currentUser,
+    Blockly.Xml.domToText(xml));
+}
+
+function buildToolbox(){
+  let xml='<xml>';
+  categories.forEach(cat=>{
+    xml+=`<category name="${cat.name}" colour="${cat.colour}">`;
+    cat.blocks.forEach(b=>{
+      xml+=`<block type="${b}"></block>`;
+    });
+    xml+='</category>';
+  });
+  xml+='</xml>';
+  return xml;
+}
+
+let workspace;
+
+function initBlockly(){
+  if(workspace) workspace.dispose();
+
+  workspace = Blockly.inject('blocklyDiv',{
+    toolbox: buildToolbox()
+  });
+
+  const saved = localStorage.getItem("ws_"+currentUser);
+  if(saved){
+    Blockly.Xml.domToWorkspace(
+      Blockly.Xml.textToDom(saved),
+      workspace
+    );
+  }
+
+  workspace.addChangeListener(saveAll);
+}
+
+function addCategory(){
+  const name = catName.value;
+  const colour = catColor.value || 180;
+  if(!name) return;
+  categories.push({name, colour, blocks:[]});
+  refresh();
+}
+
+function addBlock(){
+  const type = blockType.value;
+  const text = blockText.value;
+  if(!type || !text) return;
+
+  Blockly.defineBlocksWithJsonArray([{
+    type:type,
+    message0:text,
+    args0:[{
+      type:"field_input",
+      name:"TEXT",
+      text:"Hallo"
+    }],
+    previousStatement:null,
+    nextStatement:null,
+    colour:160
+  }]);
+
+  categories[categories.length-1].blocks.push(type);
+  refresh();
+}
+
+function refresh(){
+  workspace.updateToolbox(buildToolbox());
+  renderCategoryList();
+  saveAll();
+}
+
+function renderCategoryList(){
+  const list = document.getElementById("categoryList");
+  list.innerHTML="";
+  categories.forEach((cat,i)=>{
+    const div=document.createElement("div");
+    div.className="categoryItem";
+    div.draggable=true;
+    div.innerText=cat.name;
+    div.ondragstart=e=>e.dataTransfer.setData("index",i);
+    div.ondragover=e=>e.preventDefault();
+    div.ondrop=e=>{
+      const from=e.dataTransfer.getData("index");
+      const temp=categories[from];
+      categories.splice(from,1);
+      categories.splice(i,0,temp);
+      refresh();
+    };
+    list.appendChild(div);
+  });
+}
+
+function exportWorkspace(){
+  const xml = Blockly.Xml.workspaceToDom(workspace);
+  const data = Blockly.Xml.domToText(xml);
+  const blob = new Blob([data],{type:"text/xml"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "workspace.xml";
+  a.click();
+}
+
+function changeTheme(t){
+  document.body.className="";
+  document.body.classList.add("theme-"+t);
+}
+</script>
 
 </body>
 </html>
