@@ -2,20 +2,51 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Block Studio ULTRA+</title>
+<title>Block Studio ULTRA FIXED</title>
+
+<!-- Blockly Core -->
 <script src="https://unpkg.com/blockly/blockly.min.js"></script>
+<!-- WICHTIG: Standard Blöcke -->
+<script src="https://unpkg.com/blockly/blocks.min.js"></script>
+<!-- JavaScript Generator -->
+<script src="https://unpkg.com/blockly/javascript.min.js"></script>
 
 <style>
-body { margin:0; display:flex; height:100vh; font-family:Arial; background:#121212; color:white; }
-#leftPanel { width:340px; padding:15px; overflow:auto; background:#1e1e1e; }
-#blocklyDiv { flex:1; height:100%; }
-input, select, button {
-  width:100%; margin-bottom:8px; padding:6px;
-  border-radius:6px; border:none;
+body {
+  margin:0;
+  display:flex;
+  height:100vh;
+  font-family:Arial;
+  background:#121212;
+  color:white;
 }
-button { cursor:pointer; background:#4CAF50; color:white; }
+
+#leftPanel {
+  width:340px;
+  padding:15px;
+  overflow:auto;
+  background:#1e1e1e;
+}
+
+#blocklyDiv {
+  flex:1;
+  height:100%;
+}
+
+input, button {
+  width:100%;
+  margin-bottom:8px;
+  padding:6px;
+  border-radius:6px;
+  border:none;
+}
+
+button {
+  cursor:pointer;
+  background:#4CAF50;
+  color:white;
+}
 button:hover { background:#45a049; }
-.categoryItem { padding:5px; margin:3px 0; background:#333; }
 </style>
 </head>
 
@@ -61,14 +92,21 @@ let workspace;
 function login(){
   const name = username.value;
   if(!name) return;
-
   currentUser = name;
 
   categories = JSON.parse(localStorage.getItem("cats_"+name)) || [
+
+    // Standard Kategorien mit echten Blöcken
     {
-      name:"Start",
-      colour:200,
-      blocks:[],
+      name:"Logic",
+      colour:210,
+      blocks:["controls_if","logic_compare"],
+      subcategories:[]
+    },
+    {
+      name:"Math",
+      colour:230,
+      blocks:["math_number","math_arithmetic"],
       subcategories:[]
     }
   ];
@@ -117,7 +155,9 @@ function initBlockly(){
   if(workspace) workspace.dispose();
 
   workspace = Blockly.inject('blocklyDiv',{
-    toolbox: buildToolbox()
+    toolbox: buildToolbox(),
+    trashcan:true,
+    scrollbars:true
   });
 
   const saved = localStorage.getItem("ws_"+currentUser);
@@ -177,7 +217,8 @@ function addBlock(){
   const lastCat = categories[categories.length-1];
 
   if(lastCat.subcategories.length>0){
-    lastCat.subcategories[lastCat.subcategories.length-1].blocks.push(blockType.value);
+    lastCat.subcategories[lastCat.subcategories.length-1]
+      .blocks.push(blockType.value);
   } else {
     lastCat.blocks.push(blockType.value);
   }
