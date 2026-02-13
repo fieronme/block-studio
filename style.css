@@ -1,0 +1,19 @@
+body {
+  margin: 0;
+  font-family: Arial;
+  background: #1e1e1e;
+  color: white;
+  text-align: center;
+}
+
+#blocklyDiv {
+  height: 60vh;
+  width: 100%;
+}
+
+textarea {
+  width: 90%;
+  height: 80px;
+  margin-top: 10px;
+  font-size: 16px;
+}
