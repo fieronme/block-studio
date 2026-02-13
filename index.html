@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Button Block Studio</title>
+<title>Block Studio</title>
 
 <style>
 body{
@@ -28,16 +28,34 @@ body{
 
 .category{
   margin-bottom:15px;
+  background:#333;
+  padding:8px;
+}
+
+.categoryHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
 }
 
 .blockButton{
-  display:block;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
   width:100%;
   margin-bottom:5px;
   padding:6px;
   border:none;
   cursor:pointer;
   color:white;
+}
+
+.smallBtn{
+  background:red;
+  border:none;
+  color:white;
+  cursor:pointer;
+  padding:2px 6px;
 }
 
 .outputBlock{
@@ -92,7 +110,6 @@ function save(){
 function updateCategorySelect(){
   const select=document.getElementById("categorySelect");
   select.innerHTML="";
-
   categories.forEach((cat,index)=>{
     const option=document.createElement("option");
     option.value=index;
@@ -109,20 +126,50 @@ function renderCategories(){
     const div=document.createElement("div");
     div.className="category";
 
-    const title=document.createElement("h3");
-    title.textContent=cat.name;
-    div.appendChild(title);
+    const header=document.createElement("div");
+    header.className="categoryHeader";
 
-    cat.blocks.forEach(block=>{
-      const btn=document.createElement("button");
+    const title=document.createElement("strong");
+    title.textContent=cat.name;
+
+    const delBtn=document.createElement("button");
+    delBtn.textContent="X";
+    delBtn.className="smallBtn";
+    delBtn.onclick=()=>{
+      if(confirm("Kategorie löschen?")){
+        categories.splice(index,1);
+        save();
+        renderCategories();
+      }
+    };
+
+    header.appendChild(title);
+    header.appendChild(delBtn);
+    div.appendChild(header);
+
+    cat.blocks.forEach((block,bIndex)=>{
+      const btn=document.createElement("div");
       btn.className="blockButton";
       btn.style.background=cat.color;
-      btn.innerText=block;
 
-      btn.onclick=()=>{
+      const span=document.createElement("span");
+      span.textContent=block;
+      span.style.cursor="pointer";
+      span.onclick=()=>{
         addToWorkspace(block,cat.color);
-      }
+      };
 
+      const blockDel=document.createElement("button");
+      blockDel.textContent="X";
+      blockDel.className="smallBtn";
+      blockDel.onclick=()=>{
+        categories[index].blocks.splice(bIndex,1);
+        save();
+        renderCategories();
+      };
+
+      btn.appendChild(span);
+      btn.appendChild(blockDel);
       div.appendChild(btn);
     });
 
@@ -135,7 +182,6 @@ function renderCategories(){
 function addCategory(){
   const name=document.getElementById("catName").value;
   const color=document.getElementById("catColor").value || "blue";
-
   if(!name) return;
 
   categories.push({
@@ -151,7 +197,6 @@ function addCategory(){
 function addBlock(){
   const text=document.getElementById("blockText").value;
   const index=document.getElementById("categorySelect").value;
-
   if(!text || index===null) return;
 
   categories[index].blocks.push(text);
@@ -165,7 +210,6 @@ function addToWorkspace(text,color){
   div.className="outputBlock";
   div.style.borderColor=color;
   div.innerText=text;
-
   document.getElementById("output").appendChild(div);
 }
 
