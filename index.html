@@ -2,18 +2,13 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Block Studio</title>
+<title>Block Studio PRO</title>
 
 <style>
-body{
-  margin:0;
-  display:flex;
-  height:100vh;
-  font-family:Arial;
-}
+body{margin:0;display:flex;height:100vh;font-family:Arial;}
 
 #sidebar{
-  width:260px;
+  width:280px;
   background:#222;
   color:white;
   padding:10px;
@@ -26,67 +21,45 @@ body{
   background:#f4f4f4;
 }
 
-.category{
-  margin-bottom:15px;
-  background:#333;
-  padding:8px;
-}
+.category{margin-bottom:15px;background:#333;padding:8px;}
+.blockButton{display:block;width:100%;margin-bottom:5px;padding:6px;border:none;color:white;cursor:pointer;}
+.outputGroup{margin-bottom:15px;}
+.outputGroup h3{margin:0;}
+.outputBlock{background:white;padding:8px;margin:5px 0;border-left:6px solid black;}
 
-.categoryHeader{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.blockButton{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  width:100%;
-  margin-bottom:5px;
-  padding:6px;
-  border:none;
-  cursor:pointer;
-  color:white;
-}
-
-.smallBtn{
-  background:red;
-  border:none;
-  color:white;
-  cursor:pointer;
-  padding:2px 6px;
-}
-
-.outputBlock{
-  background:white;
-  padding:10px;
-  margin-bottom:8px;
-  border-left:6px solid black;
-}
-
-input, select, button{
-  width:100%;
-  margin-bottom:6px;
-  padding:6px;
-}
+input, select, button{width:100%;margin-bottom:6px;padding:6px;}
+.smallBtn{background:red;color:white;border:none;cursor:pointer;padding:2px 6px;margin-left:5px;}
 </style>
 </head>
 <body>
 
 <div id="sidebar">
 
-<h2>Neue Kategorie</h2>
+<h3>Kategorie</h3>
 <input id="catName" placeholder="Name">
-<input id="catColor" placeholder="Farbe (z.B. red oder #ff0000)">
-<button onclick="addCategory()">Kategorie hinzufügen</button>
+<input id="catColor" placeholder="Farbe">
+<button onclick="addCategory()">Add</button>
 
 <hr>
 
-<h2>Neuer Block</h2>
-<input id="blockText" placeholder="Text vom Block">
+<h3>Block</h3>
+<input id="blockText" placeholder="Text">
 <select id="categorySelect"></select>
-<button onclick="addBlock()">Block hinzufügen</button>
+<button onclick="addBlock()">Add Block</button>
+
+<hr>
+
+<h3>💾 Daten</h3>
+<button onclick="exportData()">Export</button>
+<button onclick="importData()">Import</button>
+
+<hr>
+
+<h3>🕓 Versionen</h3>
+<input id="versionName" placeholder="Version Name">
+<button onclick="saveVersion()">Speichern</button>
+<select id="versionList"></select>
+<button onclick="loadVersion()">Laden</button>
 
 <hr>
 
@@ -95,130 +68,169 @@ input, select, button{
 </div>
 
 <div id="workspace">
-<h2>Arbeitsbereich</h2>
+<h2>Workspace</h2>
 <div id="output"></div>
-<button onclick="clearWorkspace()">Alles löschen</button>
+<button onclick="clearWorkspace()">Clear</button>
 </div>
 
 <script>
 let categories = JSON.parse(localStorage.getItem("cats")) || [];
+let versions = JSON.parse(localStorage.getItem("versions")) || {};
 
 function save(){
   localStorage.setItem("cats", JSON.stringify(categories));
-}
-
-function updateCategorySelect(){
-  const select=document.getElementById("categorySelect");
-  select.innerHTML="";
-  categories.forEach((cat,index)=>{
-    const option=document.createElement("option");
-    option.value=index;
-    option.textContent=cat.name;
-    select.appendChild(option);
-  });
+  localStorage.setItem("versions", JSON.stringify(versions));
 }
 
 function renderCategories(){
-  const container=document.getElementById("categories");
-  container.innerHTML="";
-
-  categories.forEach((cat,index)=>{
-    const div=document.createElement("div");
+  const c = document.getElementById("categories");
+  c.innerHTML="";
+  
+  categories.forEach((cat,i)=>{
+    let div=document.createElement("div");
     div.className="category";
-
-    const header=document.createElement("div");
-    header.className="categoryHeader";
-
-    const title=document.createElement("strong");
+    
+    let title=document.createElement("h3");
     title.textContent=cat.name;
+    div.appendChild(title);
 
-    const delBtn=document.createElement("button");
-    delBtn.textContent="X";
-    delBtn.className="smallBtn";
-    delBtn.onclick=()=>{
-      if(confirm("Kategorie löschen?")){
-        categories.splice(index,1);
-        save();
-        renderCategories();
-      }
-    };
-
-    header.appendChild(title);
-    header.appendChild(delBtn);
-    div.appendChild(header);
-
-    cat.blocks.forEach((block,bIndex)=>{
-      const btn=document.createElement("div");
+    cat.blocks.forEach((b,j)=>{
+      let btn=document.createElement("button");
       btn.className="blockButton";
       btn.style.background=cat.color;
-
-      const span=document.createElement("span");
-      span.textContent=block;
-      span.style.cursor="pointer";
-      span.onclick=()=>{
-        addToWorkspace(block,cat.color);
-      };
-
-      const blockDel=document.createElement("button");
-      blockDel.textContent="X";
-      blockDel.className="smallBtn";
-      blockDel.onclick=()=>{
-        categories[index].blocks.splice(bIndex,1);
-        save();
-        renderCategories();
-      };
-
-      btn.appendChild(span);
-      btn.appendChild(blockDel);
+      btn.textContent=b;
+      btn.onclick=()=>addToWorkspace(b,cat);
       div.appendChild(btn);
     });
 
-    container.appendChild(div);
+    c.appendChild(div);
   });
 
-  updateCategorySelect();
+  updateSelect();
+  updateVersions();
+}
+
+function updateSelect(){
+  let s=document.getElementById("categorySelect");
+  s.innerHTML="";
+  categories.forEach((cat,i)=>{
+    let o=document.createElement("option");
+    o.value=i;
+    o.textContent=cat.name;
+    s.appendChild(o);
+  });
 }
 
 function addCategory(){
-  const name=document.getElementById("catName").value;
-  const color=document.getElementById("catColor").value || "blue";
+  let name=catName.value;
+  let color=catColor.value||"blue";
   if(!name) return;
 
-  categories.push({
-    name:name,
-    color:color,
-    blocks:[]
-  });
-
+  categories.push({name,color,blocks:[]});
   save();
   renderCategories();
 }
 
 function addBlock(){
-  const text=document.getElementById("blockText").value;
-  const index=document.getElementById("categorySelect").value;
-  if(!text || index===null) return;
+  let text=blockText.value;
+  let i=categorySelect.value;
+  if(!text) return;
 
-  categories[index].blocks.push(text);
-
+  categories[i].blocks.push(text);
   save();
   renderCategories();
 }
 
-function addToWorkspace(text,color){
-  const div=document.createElement("div");
+function addToWorkspace(text,cat){
+  let container=document.getElementById("output");
+
+  // Gruppe finden oder erstellen
+  let group=document.querySelector(`[data-cat="${cat.name}"]`);
+  if(!group){
+    group=document.createElement("div");
+    group.className="outputGroup";
+    group.dataset.cat=cat.name;
+
+    let title=document.createElement("h3");
+    title.textContent=cat.name;
+    group.appendChild(title);
+
+    container.appendChild(group);
+  }
+
+  let div=document.createElement("div");
   div.className="outputBlock";
-  div.style.borderColor=color;
-  div.innerText=text;
-  document.getElementById("output").appendChild(div);
+  div.style.borderColor=cat.color;
+  div.textContent=text;
+
+  group.appendChild(div);
 }
 
 function clearWorkspace(){
   document.getElementById("output").innerHTML="";
 }
 
+function exportData(){
+  let data=JSON.stringify({categories,versions});
+  let blob=new Blob([data],{type:"application/json"});
+  let a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="blockstudio.json";
+  a.click();
+}
+
+function importData(){
+  let input=document.createElement("input");
+  input.type="file";
+
+  input.onchange=e=>{
+    let file=e.target.files[0];
+    let reader=new FileReader();
+    reader.onload=()=>{
+      let data=JSON.parse(reader.result);
+      categories=data.categories||[];
+      versions=data.versions||{};
+      save();
+      renderCategories();
+    };
+    reader.readAsText(file);
+  };
+
+  input.click();
+}
+
+function saveVersion(){
+  let name=versionName.value;
+  if(!name) return;
+
+  versions[name]=JSON.stringify(categories);
+  save();
+  renderCategories();
+}
+
+function loadVersion(){
+  let name=versionList.value;
+  if(!versions[name]) return;
+
+  categories=JSON.parse(versions[name]);
+  save();
+  renderCategories();
+}
+
+function updateVersions(){
+  let list=document.getElementById("versionList");
+  list.innerHTML="";
+  Object.keys(versions).forEach(v=>{
+    let o=document.createElement("option");
+    o.value=v;
+    o.textContent=v;
+    list.appendChild(o);
+  });
+}
+
 renderCategories();
 </script>
 
 </body>
+</html>
 </html>
