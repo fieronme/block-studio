@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Block Studio FINAL+</title>
+<title>Block Studio FINAL++</title>
 
 <style>
 body{margin:0;display:flex;height:100vh;font-family:Arial;}
@@ -106,29 +106,24 @@ function renderCategories(){
     let div=document.createElement("div");
     div.className="category";
 
-    // HEADER
     let header=document.createElement("div");
     header.className="categoryHeader";
 
     let title=document.createElement("strong");
     title.textContent=cat.name;
 
-    // ✏️ EDIT CATEGORY
     let editCat=document.createElement("button");
     editCat.textContent="✏️";
     editCat.className="smallBtn editBtn";
     editCat.onclick=()=>{
       let newName=prompt("Neuer Name:", cat.name);
       let newColor=prompt("Neue Farbe:", cat.color);
-
       if(newName) categories[i].name=newName;
       if(newColor) categories[i].color=newColor;
-
       save();
       renderCategories();
     };
 
-    // ❌ DELETE CATEGORY
     let delCat=document.createElement("button");
     delCat.textContent="X";
     delCat.className="smallBtn";
@@ -145,18 +140,20 @@ function renderCategories(){
     header.appendChild(delCat);
     div.appendChild(header);
 
-    // BLOCKS
     cat.blocks.forEach((b,j)=>{
       let row=document.createElement("div");
       row.className="blockButton";
       row.style.background=cat.color;
 
       let text=document.createElement("span");
-      text.textContent=b;
+
+      // ✂️ TEXT KÜRZEN + HOVER
+      text.textContent = b.length > 33 ? b.substring(0,33) + "..." : b;
+      text.title = b;
+
       text.style.flex=1;
       text.onclick=()=>addToWorkspace(b,cat);
 
-      // ✏️ EDIT BLOCK
       let edit=document.createElement("button");
       edit.textContent="✏️";
       edit.className="smallBtn editBtn";
@@ -169,7 +166,6 @@ function renderCategories(){
         }
       };
 
-      // ❌ DELETE BLOCK
       let del=document.createElement("button");
       del.textContent="X";
       del.className="smallBtn";
