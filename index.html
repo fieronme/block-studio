@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Block Studio PRO</title>
+<title>Block Studio FINAL</title>
 
 <style>
 body{margin:0;display:flex;height:100vh;font-family:Arial;}
@@ -23,12 +23,27 @@ body{margin:0;display:flex;height:100vh;font-family:Arial;}
 
 .category{margin-bottom:15px;background:#333;padding:8px;}
 .blockButton{display:block;width:100%;margin-bottom:5px;padding:6px;border:none;color:white;cursor:pointer;}
+
 .outputGroup{margin-bottom:15px;}
-.outputGroup h3{margin:0;}
-.outputBlock{background:white;padding:8px;margin:5px 0;border-left:6px solid black;}
+.outputBlock{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:white;
+  padding:8px;
+  margin:5px 0;
+  border-left:6px solid black;
+}
+
+.smallBtn{
+  background:red;
+  color:white;
+  border:none;
+  cursor:pointer;
+  padding:2px 6px;
+}
 
 input, select, button{width:100%;margin-bottom:6px;padding:6px;}
-.smallBtn{background:red;color:white;border:none;cursor:pointer;padding:2px 6px;margin-left:5px;}
 </style>
 </head>
 <body>
@@ -144,16 +159,32 @@ function addBlock(){
 function addToWorkspace(text,cat){
   let container=document.getElementById("output");
 
-  // Gruppe finden oder erstellen
   let group=document.querySelector(`[data-cat="${cat.name}"]`);
+
   if(!group){
     group=document.createElement("div");
     group.className="outputGroup";
     group.dataset.cat=cat.name;
 
+    let header=document.createElement("div");
+    header.style.display="flex";
+    header.style.justifyContent="space-between";
+
     let title=document.createElement("h3");
     title.textContent=cat.name;
-    group.appendChild(title);
+
+    let delBtn=document.createElement("button");
+    delBtn.textContent="X";
+    delBtn.className="smallBtn";
+    delBtn.onclick=()=>{
+      if(confirm("Gruppe löschen?")){
+        group.remove();
+      }
+    };
+
+    header.appendChild(title);
+    header.appendChild(delBtn);
+    group.appendChild(header);
 
     container.appendChild(group);
   }
@@ -161,7 +192,19 @@ function addToWorkspace(text,cat){
   let div=document.createElement("div");
   div.className="outputBlock";
   div.style.borderColor=cat.color;
-  div.textContent=text;
+
+  let span=document.createElement("span");
+  span.textContent=text;
+
+  let del=document.createElement("button");
+  del.textContent="X";
+  del.className="smallBtn";
+  del.onclick=()=>{
+    div.remove();
+  };
+
+  div.appendChild(span);
+  div.appendChild(del);
 
   group.appendChild(div);
 }
@@ -232,5 +275,4 @@ renderCategories();
 </script>
 
 </body>
-</html>
 </html>
