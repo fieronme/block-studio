@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Block Studio FINAL</title>
+<title>Block Studio FINAL+</title>
 
 <style>
 body{margin:0;display:flex;height:100vh;font-family:Arial;}
@@ -22,17 +22,21 @@ body{margin:0;display:flex;height:100vh;font-family:Arial;}
 }
 
 .category{margin-bottom:15px;background:#333;padding:8px;}
-.blockButton{display:block;width:100%;margin-bottom:5px;padding:6px;border:none;color:white;cursor:pointer;}
 
-.outputGroup{margin-bottom:15px;}
-.outputBlock{
+.categoryHeader{
   display:flex;
   justify-content:space-between;
-  align-items:center;
-  background:white;
-  padding:8px;
-  margin:5px 0;
-  border-left:6px solid black;
+}
+
+.blockButton{
+  display:flex;
+  justify-content:space-between;
+  width:100%;
+  margin-bottom:5px;
+  padding:6px;
+  border:none;
+  color:white;
+  cursor:pointer;
 }
 
 .smallBtn{
@@ -41,6 +45,20 @@ body{margin:0;display:flex;height:100vh;font-family:Arial;}
   border:none;
   cursor:pointer;
   padding:2px 6px;
+  margin-left:4px;
+}
+
+.editBtn{
+  background:orange;
+}
+
+.outputGroup{margin-bottom:15px;}
+
+.outputBlock{
+  background:white;
+  padding:8px;
+  margin:5px 0;
+  border-left:6px solid black;
 }
 
 input, select, button{width:100%;margin-bottom:6px;padding:6px;}
@@ -64,20 +82,6 @@ input, select, button{width:100%;margin-bottom:6px;padding:6px;}
 
 <hr>
 
-<h3>💾 Daten</h3>
-<button onclick="exportData()">Export</button>
-<button onclick="importData()">Import</button>
-
-<hr>
-
-<h3>🕓 Versionen</h3>
-<input id="versionName" placeholder="Version Name">
-<button onclick="saveVersion()">Speichern</button>
-<select id="versionList"></select>
-<button onclick="loadVersion()">Laden</button>
-
-<hr>
-
 <div id="categories"></div>
 
 </div>
@@ -85,44 +89,107 @@ input, select, button{width:100%;margin-bottom:6px;padding:6px;}
 <div id="workspace">
 <h2>Workspace</h2>
 <div id="output"></div>
-<button onclick="clearWorkspace()">Clear</button>
 </div>
 
 <script>
 let categories = JSON.parse(localStorage.getItem("cats")) || [];
-let versions = JSON.parse(localStorage.getItem("versions")) || {};
 
 function save(){
   localStorage.setItem("cats", JSON.stringify(categories));
-  localStorage.setItem("versions", JSON.stringify(versions));
 }
 
 function renderCategories(){
-  const c = document.getElementById("categories");
+  const c=document.getElementById("categories");
   c.innerHTML="";
-  
+
   categories.forEach((cat,i)=>{
     let div=document.createElement("div");
     div.className="category";
-    
-    let title=document.createElement("h3");
-    title.textContent=cat.name;
-    div.appendChild(title);
 
+    // HEADER
+    let header=document.createElement("div");
+    header.className="categoryHeader";
+
+    let title=document.createElement("strong");
+    title.textContent=cat.name;
+
+    // ✏️ EDIT CATEGORY
+    let editCat=document.createElement("button");
+    editCat.textContent="✏️";
+    editCat.className="smallBtn editBtn";
+    editCat.onclick=()=>{
+      let newName=prompt("Neuer Name:", cat.name);
+      let newColor=prompt("Neue Farbe:", cat.color);
+
+      if(newName) categories[i].name=newName;
+      if(newColor) categories[i].color=newColor;
+
+      save();
+      renderCategories();
+    };
+
+    // ❌ DELETE CATEGORY
+    let delCat=document.createElement("button");
+    delCat.textContent="X";
+    delCat.className="smallBtn";
+    delCat.onclick=()=>{
+      if(confirm("Kategorie löschen?")){
+        categories.splice(i,1);
+        save();
+        renderCategories();
+      }
+    };
+
+    header.appendChild(title);
+    header.appendChild(editCat);
+    header.appendChild(delCat);
+    div.appendChild(header);
+
+    // BLOCKS
     cat.blocks.forEach((b,j)=>{
-      let btn=document.createElement("button");
-      btn.className="blockButton";
-      btn.style.background=cat.color;
-      btn.textContent=b;
-      btn.onclick=()=>addToWorkspace(b,cat);
-      div.appendChild(btn);
+      let row=document.createElement("div");
+      row.className="blockButton";
+      row.style.background=cat.color;
+
+      let text=document.createElement("span");
+      text.textContent=b;
+      text.style.flex=1;
+      text.onclick=()=>addToWorkspace(b,cat);
+
+      // ✏️ EDIT BLOCK
+      let edit=document.createElement("button");
+      edit.textContent="✏️";
+      edit.className="smallBtn editBtn";
+      edit.onclick=()=>{
+        let newText=prompt("Neuer Text:", b);
+        if(newText){
+          categories[i].blocks[j]=newText;
+          save();
+          renderCategories();
+        }
+      };
+
+      // ❌ DELETE BLOCK
+      let del=document.createElement("button");
+      del.textContent="X";
+      del.className="smallBtn";
+      del.onclick=()=>{
+        categories[i].blocks.splice(j,1);
+        save();
+        renderCategories();
+      };
+
+      row.appendChild(text);
+      row.appendChild(edit);
+      row.appendChild(del);
+
+      div.appendChild(row);
     });
 
     c.appendChild(div);
   });
 
   updateSelect();
-  updateVersions();
 }
 
 function updateSelect(){
@@ -166,109 +233,19 @@ function addToWorkspace(text,cat){
     group.className="outputGroup";
     group.dataset.cat=cat.name;
 
-    let header=document.createElement("div");
-    header.style.display="flex";
-    header.style.justifyContent="space-between";
-
     let title=document.createElement("h3");
     title.textContent=cat.name;
 
-    let delBtn=document.createElement("button");
-    delBtn.textContent="X";
-    delBtn.className="smallBtn";
-    delBtn.onclick=()=>{
-      if(confirm("Gruppe löschen?")){
-        group.remove();
-      }
-    };
-
-    header.appendChild(title);
-    header.appendChild(delBtn);
-    group.appendChild(header);
-
+    group.appendChild(title);
     container.appendChild(group);
   }
 
   let div=document.createElement("div");
   div.className="outputBlock";
   div.style.borderColor=cat.color;
-
-  let span=document.createElement("span");
-  span.textContent=text;
-
-  let del=document.createElement("button");
-  del.textContent="X";
-  del.className="smallBtn";
-  del.onclick=()=>{
-    div.remove();
-  };
-
-  div.appendChild(span);
-  div.appendChild(del);
+  div.textContent=text;
 
   group.appendChild(div);
-}
-
-function clearWorkspace(){
-  document.getElementById("output").innerHTML="";
-}
-
-function exportData(){
-  let data=JSON.stringify({categories,versions});
-  let blob=new Blob([data],{type:"application/json"});
-  let a=document.createElement("a");
-  a.href=URL.createObjectURL(blob);
-  a.download="blockstudio.json";
-  a.click();
-}
-
-function importData(){
-  let input=document.createElement("input");
-  input.type="file";
-
-  input.onchange=e=>{
-    let file=e.target.files[0];
-    let reader=new FileReader();
-    reader.onload=()=>{
-      let data=JSON.parse(reader.result);
-      categories=data.categories||[];
-      versions=data.versions||{};
-      save();
-      renderCategories();
-    };
-    reader.readAsText(file);
-  };
-
-  input.click();
-}
-
-function saveVersion(){
-  let name=versionName.value;
-  if(!name) return;
-
-  versions[name]=JSON.stringify(categories);
-  save();
-  renderCategories();
-}
-
-function loadVersion(){
-  let name=versionList.value;
-  if(!versions[name]) return;
-
-  categories=JSON.parse(versions[name]);
-  save();
-  renderCategories();
-}
-
-function updateVersions(){
-  let list=document.getElementById("versionList");
-  list.innerHTML="";
-  Object.keys(versions).forEach(v=>{
-    let o=document.createElement("option");
-    o.value=v;
-    o.textContent=v;
-    list.appendChild(o);
-  });
 }
 
 renderCategories();
