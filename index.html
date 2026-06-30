@@ -228,7 +228,18 @@ function renderCategories(){
       }
     };
 
+    let catToggle=document.createElement("button");
+    catToggle.textContent="🐱";
+    catToggle.title="Katzen-Kategorie: max. 1 Block daraus, 2/10 Chance bei Überrasch mich";
+    catToggle.className="smallBtn weightBtn" + (cat.isCat ? " active" : "");
+    catToggle.onclick=()=>{
+      categories[i].isCat=!categories[i].isCat;
+      save();
+      renderCategories();
+    };
+
     header.appendChild(title);
+    header.appendChild(catToggle);
     header.appendChild(editCat);
     header.appendChild(delCat);
     div.appendChild(header);
@@ -384,7 +395,7 @@ function renderWorkspace(){
 
 function surpriseMe(){
   categories.forEach(cat=>{
-    if(!cat.blocks.length) return;
+    if(cat.isCat || !cat.blocks.length) return;
 
     let unique=new Map();
     cat.blocks.map(normalizeBlock).forEach(block=>{
@@ -406,6 +417,20 @@ function surpriseMe(){
 
     picks.forEach(block=>addToWorkspace(block.text,cat));
   });
+
+  let catCategories=categories.filter(cat=>cat.isCat && cat.blocks.length);
+  if(catCategories.length && randomInt(1,10) <= 2){
+    let chosenCat=catCategories[randomInt(0, catCategories.length-1)];
+    let unique=new Map();
+    chosenCat.blocks.map(normalizeBlock).forEach(block=>{
+      if(block.text && block.weight !== "excluded" && !unique.has(block.text)) unique.set(block.text, block);
+    });
+    let candidates=[...unique.values()];
+    if(candidates.length){
+      let selected=candidates[randomInt(0, candidates.length-1)];
+      addToWorkspace(selected.text, chosenCat);
+    }
+  }
 }
 
 function getWorkspaceText(){
