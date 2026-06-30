@@ -19,6 +19,7 @@ body{margin:0;display:flex;height:100vh;font-family:Arial;}
   flex:1;
   padding:20px;
   background:#f4f4f4;
+  overflow-y:auto;
 }
 
 .category{margin-bottom:15px;background:#333;padding:8px;}
@@ -26,7 +27,10 @@ body{margin:0;display:flex;height:100vh;font-family:Arial;}
 .categoryHeader{
   display:flex;
   justify-content:space-between;
+  align-items:center;
 }
+
+.categoryHeader strong{flex:1;}
 
 .blockButton{
   display:flex;
@@ -37,6 +41,7 @@ body{margin:0;display:flex;height:100vh;font-family:Arial;}
   border:none;
   color:white;
   cursor:pointer;
+  box-sizing:border-box;
 }
 
 .smallBtn{
@@ -46,10 +51,18 @@ body{margin:0;display:flex;height:100vh;font-family:Arial;}
   cursor:pointer;
   padding:2px 6px;
   margin-left:4px;
+  width:auto;
 }
 
 .editBtn{
   background:orange;
+}
+
+.workspaceActions{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+  gap:6px;
+  margin-bottom:14px;
 }
 
 .outputGroup{margin-bottom:15px;}
@@ -59,9 +72,11 @@ body{margin:0;display:flex;height:100vh;font-family:Arial;}
   padding:8px;
   margin:5px 0;
   border-left:6px solid black;
+  white-space:pre-wrap;
 }
 
-input, select, button{width:100%;margin-bottom:6px;padding:6px;}
+input, select, button{width:100%;margin-bottom:6px;padding:6px;box-sizing:border-box;}
+#importFile{display:none;}
 </style>
 </head>
 <body>
@@ -88,14 +103,40 @@ input, select, button{width:100%;margin-bottom:6px;padding:6px;}
 
 <div id="workspace">
 <h2>Workspace</h2>
+<div class="workspaceActions">
+  <button onclick="surpriseMe()">🎲 Überrasch mich</button>
+  <button onclick="copyWorkspace()">Workspace kopieren</button>
+  <button onclick="exportJson()">Export (.json)</button>
+  <button onclick="document.getElementById('importFile').click()">Import (.json)</button>
+</div>
+<input id="importFile" type="file" accept="application/json,.json" onchange="importJson(event)">
 <div id="output"></div>
 </div>
 
 <script>
 let categories = JSON.parse(localStorage.getItem("cats")) || [];
+let workspaceItems = JSON.parse(localStorage.getItem("workspaceItems")) || [];
 
 function save(){
   localStorage.setItem("cats", JSON.stringify(categories));
+  localStorage.setItem("workspaceItems", JSON.stringify(workspaceItems));
+}
+
+function randomInt(min, max){
+  min = Math.ceil(Number(min));
+  max = Math.floor(Number(max));
+
+  if(Number.isNaN(min)) min = 0;
+  if(Number.isNaN(max)) max = 100;
+  if(min > max) [min, max] = [max, min];
+
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function replaceRng(text){
+  return String(text).replace(/\/\/rng(?:\/(-?\d+),(-?\d+))?\/\//g, (_, min, max) => {
+    return min === undefined ? randomInt(0, 100) : randomInt(min, max);
+  });
 }
 
 function renderCategories(){
@@ -116,12 +157,24 @@ function renderCategories(){
     editCat.textContent="✏️";
     editCat.className="smallBtn editBtn";
     editCat.onclick=()=>{
+      let oldName=cat.name;
       let newName=prompt("Neuer Name:", cat.name);
       let newColor=prompt("Neue Farbe:", cat.color);
-      if(newName) categories[i].name=newName;
-      if(newColor) categories[i].color=newColor;
+      if(newName) {
+        categories[i].name=newName;
+        workspaceItems.forEach(item=>{
+          if(item.categoryName === oldName) item.categoryName = newName;
+        });
+      }
+      if(newColor) {
+        categories[i].color=newColor;
+        workspaceItems.forEach(item=>{
+          if(item.categoryName === categories[i].name) item.color = newColor;
+        });
+      }
       save();
       renderCategories();
+      renderWorkspace();
     };
 
     let delCat=document.createElement("button");
@@ -147,7 +200,6 @@ function renderCategories(){
 
       let text=document.createElement("span");
 
-      // ✂️ TEXT KÜRZEN + HOVER
       text.textContent = b.length > 33 ? b.substring(0,33) + "..." : b;
       text.title = b;
 
@@ -205,6 +257,8 @@ function addCategory(){
   if(!name) return;
 
   categories.push({name,color,blocks:[]});
+  catName.value="";
+  catColor.value="";
   save();
   renderCategories();
 }
@@ -212,39 +266,132 @@ function addCategory(){
 function addBlock(){
   let text=blockText.value;
   let i=categorySelect.value;
-  if(!text) return;
+  if(!text || i === "") return;
 
   categories[i].blocks.push(text);
+  blockText.value="";
   save();
   renderCategories();
 }
 
 function addToWorkspace(text,cat){
+  workspaceItems.push({
+    categoryName: cat.name,
+    color: cat.color,
+    text: replaceRng(text)
+  });
+  save();
+  renderWorkspace();
+}
+
+function renderWorkspace(){
   let container=document.getElementById("output");
+  container.innerHTML="";
 
-  let group=document.querySelector(`[data-cat="${cat.name}"]`);
+  workspaceItems.forEach(item=>{
+    let group=document.querySelector(`[data-cat="${CSS.escape(item.categoryName)}"]`);
 
-  if(!group){
-    group=document.createElement("div");
-    group.className="outputGroup";
-    group.dataset.cat=cat.name;
+    if(!group){
+      group=document.createElement("div");
+      group.className="outputGroup";
+      group.dataset.cat=item.categoryName;
 
-    let title=document.createElement("h3");
-    title.textContent=cat.name;
+      let title=document.createElement("h3");
+      title.textContent=item.categoryName;
 
-    group.appendChild(title);
-    container.appendChild(group);
+      group.appendChild(title);
+      container.appendChild(group);
+    }
+
+    let div=document.createElement("div");
+    div.className="outputBlock";
+    div.style.borderColor=item.color;
+    div.textContent=item.text;
+
+    group.appendChild(div);
+  });
+}
+
+function surpriseMe(){
+  categories.forEach(cat=>{
+    if(!cat.blocks.length) return;
+
+    let amount=randomInt(0,5);
+    let pool=[...new Set(cat.blocks)];
+    let picks=[];
+
+    while(picks.length < amount && pool.length){
+      let index=randomInt(0,pool.length-1);
+      picks.push(pool.splice(index,1)[0]);
+    }
+
+    picks.forEach(block=>addToWorkspace(block,cat));
+  });
+}
+
+function getWorkspaceText(){
+  return workspaceItems.map(item=>`${item.categoryName}: ${item.text}`).join("\n");
+}
+
+async function copyWorkspace(){
+  let text=getWorkspaceText();
+  if(!text) return;
+
+  try{
+    await navigator.clipboard.writeText(text);
+    alert("Workspace kopiert.");
+  }catch(error){
+    let helper=document.createElement("textarea");
+    helper.value=text;
+    document.body.appendChild(helper);
+    helper.select();
+    document.execCommand("copy");
+    helper.remove();
+    alert("Workspace kopiert.");
   }
+}
 
-  let div=document.createElement("div");
-  div.className="outputBlock";
-  div.style.borderColor=cat.color;
-  div.textContent=text;
+function exportJson(){
+  let data={
+    version:1,
+    exportedAt:new Date().toISOString(),
+    categories,
+    workspaceItems
+  };
+  let blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json"});
+  let url=URL.createObjectURL(blob);
+  let a=document.createElement("a");
+  a.href=url;
+  a.download="block-editor-export.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
-  group.appendChild(div);
+function importJson(event){
+  let file=event.target.files[0];
+  event.target.value="";
+  if(!file) return;
+
+  let reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      let data=JSON.parse(reader.result);
+      if(!Array.isArray(data.categories)) throw new Error("categories fehlt");
+
+      categories=data.categories;
+      workspaceItems=Array.isArray(data.workspaceItems) ? data.workspaceItems : [];
+      save();
+      renderCategories();
+      renderWorkspace();
+    }catch(error){
+      alert("Import fehlgeschlagen: Die JSON-Datei passt nicht zu diesem Editor.");
+    }
+  };
+  reader.readAsText(file);
 }
 
 renderCategories();
+renderWorkspace();
 </script>
 
 </body>
