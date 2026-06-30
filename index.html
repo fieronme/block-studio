@@ -35,6 +35,7 @@ body{margin:0;display:flex;height:100vh;font-family:Arial;}
 .blockButton{
   display:flex;
   justify-content:space-between;
+  align-items:center;
   width:100%;
   margin-bottom:5px;
   padding:6px;
@@ -42,6 +43,11 @@ body{margin:0;display:flex;height:100vh;font-family:Arial;}
   color:white;
   cursor:pointer;
   box-sizing:border-box;
+}
+
+.blockButton span{
+  min-width:0;
+  overflow:hidden;
 }
 
 .smallBtn{
@@ -56,6 +62,14 @@ body{margin:0;display:flex;height:100vh;font-family:Arial;}
 
 .editBtn{
   background:orange;
+}
+
+.weightBtn{
+  background:#555;
+}
+
+.weightBtn.active{
+  background:#0b8f4d;
 }
 
 .workspaceActions{
@@ -140,6 +154,31 @@ function replaceRng(text){
   });
 }
 
+function normalizeBlock(block){
+  if(typeof block === "string") return {text:block, weight:"normal"};
+  return {
+    text:String(block.text || ""),
+    weight:["favorite","rare"].includes(block.weight) ? block.weight : "normal"
+  };
+}
+
+function setBlockWeight(categoryIndex, blockIndex, weight){
+  let block=normalizeBlock(categories[categoryIndex].blocks[blockIndex]);
+  block.weight = block.weight === weight ? "normal" : weight;
+  categories[categoryIndex].blocks[blockIndex]=block;
+  save();
+  renderCategories();
+}
+
+function weightedPick(pool){
+  let weighted=[];
+  pool.forEach(block=>{
+    let copies=block.weight === "favorite" ? 5 : block.weight === "rare" ? 1 : 3;
+    for(let i=0;i<copies;i++) weighted.push(block);
+  });
+  return weighted[randomInt(0, weighted.length-1)];
+}
+
 function renderCategories(){
   const c=document.getElementById("categories");
   c.innerHTML="";
@@ -194,7 +233,9 @@ function renderCategories(){
     header.appendChild(delCat);
     div.appendChild(header);
 
-    cat.blocks.forEach((b,j)=>{
+    cat.blocks.forEach((rawBlock,j)=>{
+      let block=normalizeBlock(rawBlock);
+      let b=block.text;
       let row=document.createElement("div");
       row.className="blockButton";
       row.style.background=cat.color;
@@ -207,13 +248,25 @@ function renderCategories(){
       text.style.flex=1;
       text.onclick=()=>addToWorkspace(b,cat);
 
+      let fav=document.createElement("button");
+      fav.textContent="♥";
+      fav.title="Kommt bei Überrasch mich häufiger";
+      fav.className="smallBtn weightBtn" + (block.weight === "favorite" ? " active" : "");
+      fav.onclick=()=>setBlockWeight(i,j,"favorite");
+
+      let rare=document.createElement("button");
+      rare.textContent="🗑";
+      rare.title="Kommt bei Überrasch mich seltener";
+      rare.className="smallBtn weightBtn" + (block.weight === "rare" ? " active" : "");
+      rare.onclick=()=>setBlockWeight(i,j,"rare");
+
       let edit=document.createElement("button");
       edit.textContent="✏️";
       edit.className="smallBtn editBtn";
       edit.onclick=()=>{
         let newText=prompt("Neuer Text:", b);
         if(newText){
-          categories[i].blocks[j]=newText;
+          categories[i].blocks[j]={...block,text:newText};
           save();
           renderCategories();
         }
@@ -229,6 +282,8 @@ function renderCategories(){
       };
 
       row.appendChild(text);
+      row.appendChild(fav);
+      row.appendChild(rare);
       row.appendChild(edit);
       row.appendChild(del);
 
@@ -269,7 +324,7 @@ function addBlock(){
   let i=categorySelect.value;
   if(!text || i === "") return;
 
-  categories[i].blocks.push(text);
+  categories[i].blocks.push({text,weight:"normal"});
   blockText.value="";
   save();
   renderCategories();
@@ -318,15 +373,20 @@ function surpriseMe(){
     if(!cat.blocks.length) return;
 
     let amount=randomInt(0,5);
-    let pool=[...new Set(cat.blocks)];
+    let unique=new Map();
+    cat.blocks.map(normalizeBlock).forEach(block=>{
+      if(block.text && !unique.has(block.text)) unique.set(block.text, block);
+    });
+    let pool=[...unique.values()];
     let picks=[];
 
     while(picks.length < amount && pool.length){
-      let index=randomInt(0,pool.length-1);
-      picks.push(pool.splice(index,1)[0]);
+      let selected=weightedPick(pool);
+      picks.push(selected);
+      pool=pool.filter(block=>block.text !== selected.text);
     }
 
-    picks.forEach(block=>addToWorkspace(block,cat));
+    picks.forEach(block=>addToWorkspace(block.text,cat));
   });
 }
 
@@ -388,7 +448,10 @@ function importJson(event){
       let data=JSON.parse(reader.result);
       if(!Array.isArray(data.categories)) throw new Error("categories fehlt");
 
-      categories=data.categories;
+      categories=data.categories.map(cat=>({
+        ...cat,
+        blocks:Array.isArray(cat.blocks) ? cat.blocks.map(normalizeBlock) : []
+      }));
       workspaceItems=Array.isArray(data.workspaceItems) ? data.workspaceItems : [];
       save();
       renderCategories();
