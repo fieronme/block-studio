@@ -106,6 +106,7 @@ input, select, button{width:100%;margin-bottom:6px;padding:6px;box-sizing:border
 <div class="workspaceActions">
   <button onclick="surpriseMe()">🎲 Überrasch mich</button>
   <button onclick="copyWorkspace()">Workspace kopieren</button>
+  <button onclick="clearWorkspace()">Workspace leeren</button>
   <button onclick="exportJson()">Export (.json)</button>
   <button onclick="document.getElementById('importFile').click()">Import (.json)</button>
 </div>
@@ -349,6 +350,15 @@ async function copyWorkspace(){
     helper.remove();
     alert("Workspace kopiert.");
   }
+}
+
+function clearWorkspace(){
+  if(!workspaceItems.length) return;
+  if(!confirm("Workspace wirklich leeren?")) return;
+
+  workspaceItems=[];
+  save();
+  renderWorkspace();
 }
 
 function exportJson(){
