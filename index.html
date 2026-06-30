@@ -158,7 +158,7 @@ function normalizeBlock(block){
   if(typeof block === "string") return {text:block, weight:"normal"};
   return {
     text:String(block.text || ""),
-    weight:["favorite","rare"].includes(block.weight) ? block.weight : "normal"
+    weight:["favorite","rare","excluded","mandatory"].includes(block.weight) ? block.weight : "normal"
   };
 }
 
@@ -260,6 +260,18 @@ function renderCategories(){
       rare.className="smallBtn weightBtn" + (block.weight === "rare" ? " active" : "");
       rare.onclick=()=>setBlockWeight(i,j,"rare");
 
+      let excl=document.createElement("button");
+      excl.textContent="💣";
+      excl.title="Bei Überrasch mich ausschließen";
+      excl.className="smallBtn weightBtn" + (block.weight === "excluded" ? " active" : "");
+      excl.onclick=()=>setBlockWeight(i,j,"excluded");
+
+      let mand=document.createElement("button");
+      mand.textContent="🔥";
+      mand.title="Immer bei Überrasch mich dabei (Pflicht)";
+      mand.className="smallBtn weightBtn" + (block.weight === "mandatory" ? " active" : "");
+      mand.onclick=()=>setBlockWeight(i,j,"mandatory");
+
       let edit=document.createElement("button");
       edit.textContent="✏️";
       edit.className="smallBtn editBtn";
@@ -284,6 +296,8 @@ function renderCategories(){
       row.appendChild(text);
       row.appendChild(fav);
       row.appendChild(rare);
+      row.appendChild(excl);
+      row.appendChild(mand);
       row.appendChild(edit);
       row.appendChild(del);
 
@@ -372,15 +386,19 @@ function surpriseMe(){
   categories.forEach(cat=>{
     if(!cat.blocks.length) return;
 
-    let amount=randomInt(0,5);
     let unique=new Map();
     cat.blocks.map(normalizeBlock).forEach(block=>{
       if(block.text && !unique.has(block.text)) unique.set(block.text, block);
     });
-    let pool=[...unique.values()];
-    let picks=[];
+    let all=[...unique.values()];
 
-    while(picks.length < amount && pool.length){
+    let mandatory=all.filter(block=>block.weight === "mandatory");
+    let pool=all.filter(block=>block.weight !== "excluded" && block.weight !== "mandatory");
+
+    let amount=randomInt(0,5);
+    let picks=[...mandatory];
+
+    while(picks.length < amount + mandatory.length && pool.length){
       let selected=weightedPick(pool);
       picks.push(selected);
       pool=pool.filter(block=>block.text !== selected.text);
